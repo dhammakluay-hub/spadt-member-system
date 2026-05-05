@@ -1,26 +1,70 @@
 @import "tailwindcss";
 
 :root {
+  /* SPADT Thailand Brand Palette */
+  --spadt-navy: #0a1e3f;
+  --spadt-navy-dark: #050f20;
+  --spadt-navy-light: #1a3366;
+  --spadt-gold: #d4af37;
+  --spadt-gold-dark: #a88a2c;
+  --spadt-gold-light: #e6c96b;
+  --spadt-cream: #faf7f0;
+  --spadt-gray: #f3f4f6;
+
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0a1e3f;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-spadt-navy: var(--spadt-navy);
+  --color-spadt-navy-dark: var(--spadt-navy-dark);
+  --color-spadt-navy-light: var(--spadt-navy-light);
+  --color-spadt-gold: var(--spadt-gold);
+  --color-spadt-gold-dark: var(--spadt-gold-dark);
+  --color-spadt-gold-light: var(--spadt-gold-light);
+  --color-spadt-cream: var(--spadt-cream);
+  --font-sans: var(--font-sarabun), "Sarabun", Arial, Helvetica, sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+/* Utility classes */
+.spadt-gradient {
+  background: linear-gradient(135deg, var(--spadt-navy) 0%, var(--spadt-navy-light) 100%);
+}
+
+.spadt-gradient-gold {
+  background: linear-gradient(135deg, var(--spadt-gold) 0%, var(--spadt-gold-light) 100%);
+}
+
+.spadt-btn {
+  @apply px-4 py-2 rounded-lg font-semibold transition-all;
+}
+
+.spadt-btn-primary {
+  background: var(--spadt-navy);
+  color: white;
+}
+
+.spadt-btn-primary:hover {
+  background: var(--spadt-navy-light);
+}
+
+.spadt-btn-gold {
+  background: var(--spadt-gold);
+  color: var(--spadt-navy);
+}
+
+.spadt-btn-gold:hover {
+  background: var(--spadt-gold-dark);
+}
+
+.spadt-card {
+  @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6;
 }

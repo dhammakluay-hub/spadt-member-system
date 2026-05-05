@@ -1,0 +1,38 @@
+{
+  "name": "SPADT Thailand — Member Management",
+  "short_name": "SPADT",
+  "description": "ระบบจัดการสมาชิก สมาคมกีฬาคนพิการแห่งประเทศไทย",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a1e3f",
+  "theme_color": "#0a1e3f",
+  "lang": "th",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "ลงทะเบียนสมาชิก",
+      "url": "/register",
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "บัตรสมาชิก",
+      "url": "/cards",
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
+    }
+  ]
+}

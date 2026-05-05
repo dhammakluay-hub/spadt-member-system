@@ -1,36 +1,127 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SPADT Thailand — Member Management System
 
-## Getting Started
+ระบบจัดการสมาชิก สมาคมกีฬาคนพิการแห่งประเทศไทย (SPADT)
+Full-Stack: **Next.js 16 + TypeScript + Tailwind CSS + Supabase**
 
-First, run the development server:
+## Quick Start
 
 ```bash
+# Load nvm (first time per shell)
+export NVM_DIR="$HOME/.nvm"
+. "$NVM_DIR/nvm.sh"
+
+# Dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# → http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Project Structure
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+spadt-member-system/
+├── app/                    # Next.js App Router pages
+│   ├── login/              # Login page
+│   ├── dashboard/          # Statistics dashboard
+│   ├── members/            # Member list + search
+│   ├── register/           # 3-step registration form
+│   ├── pending/            # Approval workflow
+│   ├── cards/              # QR-code member cards
+│   ├── reports/            # Reports + Excel export
+│   ├── classification/     # IPC/IF 167 codes
+│   └── settings/           # System settings
+├── components/
+│   ├── AppShell.tsx        # Sidebar + Header wrapper
+│   ├── Sidebar.tsx
+│   ├── Header.tsx
+│   ├── MemberCard.tsx      # QR-code card UI
+│   └── RegistrationForm/   # Step1/Step2/Step3
+├── lib/
+│   ├── supabase.ts         # Supabase client (browser + SSR)
+│   ├── auth.ts             # Auth helpers
+│   ├── api.ts              # MemberAPI · StorageAPI · ExportAPI
+│   └── constants.ts        # Sports · Classifications · Provinces
+├── middleware.ts           # Auth guard
+└── .env.local              # Supabase credentials (gitignored)
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment Variables
 
-## Learn More
+See `.env.local` — contains Supabase URL + anon key carried over from the legacy
+`sports_member_system_supabase.html`.
 
-To learn more about Next.js, take a look at the following resources:
+## Supabase Schema (expected)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The frontend expects these tables. Create them in Supabase SQL editor:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```sql
+-- profiles: role mapping for auth users
+create table if not exists public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  role text not null default 'member' check (role in ('admin','staff','member')),
+  created_at timestamptz default now()
+);
 
-## Deploy on Vercel
+-- members: registration records
+create table if not exists public.members (
+  id uuid primary key default gen_random_uuid(),
+  member_code text unique,
+  first_name text not null,
+  last_name text not null,
+  nickname text,
+  national_id text,
+  birth_date date,
+  gender text,
+  phone text,
+  email text,
+  address text,
+  province text,
+  district text,
+  subdistrict text,
+  postal_code text,
+  disability_type text,
+  sport_code text,
+  classification_code text,
+  photo_url text,
+  status text not null default 'pending'
+    check (status in ('pending','approved','rejected','expired')),
+  created_at timestamptz default now(),
+  updated_at timestamptz
+);
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+-- RLS
+alter table public.members enable row level security;
+alter table public.profiles enable row level security;
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+create policy "Admin/Staff read all" on public.members
+  for select using (
+    exists (select 1 from profiles where id = auth.uid() and role in ('admin','staff'))
+  );
+
+create policy "Admin/Staff write" on public.members
+  for all using (
+    exists (select 1 from profiles where id = auth.uid() and role in ('admin','staff'))
+  );
+
+create policy "User read own profile" on public.profiles
+  for select using (id = auth.uid());
+```
+
+Then create Storage bucket `member-photos` (public).
+
+## Migration Phases
+
+- [x] **Phase 1** — Project structure + Supabase connection
+- [ ] **Phase 2** — Core features (Dashboard / Members / Registration / Approval / Cards) — stubs ready, needs DB
+- [ ] **Phase 3** — Advanced features + Vercel deploy
+- [ ] **Phase 4** — Testing + training + go-live
+
+## Deploy (Vercel)
+
+```bash
+git init && git add . && git commit -m "Initial commit"
+# Push to GitHub, connect to Vercel, set env vars, deploy
+```
+
+## License
+
+Prepared for Maitree Kongruang · SPADT Thailand
