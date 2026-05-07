@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, CheckCircle2, Lock } from "lucide-react";
+import { Loader2, CheckCircle2, Lock, Eye, EyeOff } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
 import { SPADT_BRAND } from "@/lib/constants";
 
@@ -11,17 +11,50 @@ export default function ResetPasswordPage() {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  // null = still detecting, true = ready to set password, false = link expired/invalid
   const [validSession, setValidSession] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // When user clicks email link, Supabase sets a recovery session
+    // Supabase recovery links arrive as either:
+    //   1. URL hash: #access_token=...&type=recovery   (older flow)
+    //   2. URL search: ?code=...                         (newer PKCE flow)
+    // The browser client (@supabase/ssr) auto-detects on load and emits
+    // PASSWORD_RECOVERY via onAuthStateChange. We listen for that event so we
+    // don't race the auto-detect (which would make getSession() return null).
     const sb = getSupabase();
-    sb.auth.getSession().then(({ data }) => {
-      setValidSession(!!data.session);
+
+    let cancelled = false;
+    let resolved = false;
+    const resolve = (ok: boolean) => {
+      if (cancelled || resolved) return;
+      resolved = true;
+      setValidSession(ok);
+    };
+
+    const { data: sub } = sb.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
+        resolve(true);
+      }
     });
+
+    // Also try once immediately in case the event already fired before listener
+    sb.auth.getSession().then(({ data }) => {
+      if (data.session) resolve(true);
+    });
+
+    // Give the auto-detect ~3s. After that, if no session, treat as expired.
+    const timer = setTimeout(() => resolve(false), 3000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   const submit = async (e: React.FormEvent) => {
@@ -59,6 +92,18 @@ export default function ResetPasswordPage() {
     );
   }
 
+  if (validSession === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6"
+        style={{ background: "linear-gradient(135deg, #0a1e3f 0%, #1a3366 100%)" }}>
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 text-center">
+          <Loader2 className="w-8 h-8 mx-auto animate-spin text-[var(--spadt-navy)]" />
+          <p className="mt-3 text-sm text-gray-600">กำลังตรวจสอบลิงก์...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (validSession === false) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6"
@@ -67,7 +112,7 @@ export default function ResetPasswordPage() {
           <div className="text-red-600 text-5xl mb-3">⚠️</div>
           <h2 className="text-xl font-bold text-[var(--spadt-navy)]">ลิงก์หมดอายุหรือไม่ถูกต้อง</h2>
           <p className="mt-3 text-sm text-gray-600">
-            ลิงก์ตั้งรหัสผ่านอาจหมดอายุแล้ว กรุณาขอลิงก์ใหม่
+            ลิงก์ตั้งรหัสผ่านอาจหมดอายุแล้ว หรือถูกใช้ไปแล้ว — กรุณาขอลิงก์ใหม่
           </p>
           <Link href="/forgot-password" className="mt-6 inline-block spadt-btn spadt-btn-primary">
             ขอลิงก์ใหม่
@@ -90,22 +135,38 @@ export default function ResetPasswordPage() {
         <form onSubmit={submit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">รหัสผ่านใหม่ *</label>
-            <input
-              type="password" required minLength={8}
-              autoComplete="new-password"
-              placeholder="อย่างน้อย 8 ตัวอักษร"
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--spadt-navy)]"
-              value={password} onChange={(e) => setPassword(e.target.value)}
-            />
+            <div className="relative mt-1">
+              <input
+                type={showPassword ? "text" : "password"}
+                required minLength={8}
+                autoComplete="new-password"
+                placeholder="อย่างน้อย 8 ตัวอักษร"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--spadt-navy)]"
+                value={password} onChange={(e) => setPassword(e.target.value)}
+              />
+              <button type="button" onClick={() => setShowPassword(v => !v)}
+                aria-label={showPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+                className="absolute inset-y-0 right-2 flex items-center px-2 text-gray-500 hover:text-[var(--spadt-navy)]">
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">ยืนยันรหัสผ่าน *</label>
-            <input
-              type="password" required
-              autoComplete="new-password"
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--spadt-navy)]"
-              value={confirm} onChange={(e) => setConfirm(e.target.value)}
-            />
+            <div className="relative mt-1">
+              <input
+                type={showConfirm ? "text" : "password"}
+                required
+                autoComplete="new-password"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--spadt-navy)]"
+                value={confirm} onChange={(e) => setConfirm(e.target.value)}
+              />
+              <button type="button" onClick={() => setShowConfirm(v => !v)}
+                aria-label={showConfirm ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+                className="absolute inset-y-0 right-2 flex items-center px-2 text-gray-500 hover:text-[var(--spadt-navy)]">
+                {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
 
           {error && (

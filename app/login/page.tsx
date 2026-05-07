@@ -6,7 +6,7 @@ import Link from "next/link";
 import { signIn } from "@/lib/auth";
 import { getSupabase } from "@/lib/supabase";
 import { SPADT_BRAND } from "@/lib/constants";
-import { Loader2, CheckCircle2, UserPlus } from "lucide-react";
+import { Loader2, CheckCircle2, UserPlus, Eye, EyeOff } from "lucide-react";
 
 function LoginInner() {
   const router = useRouter();
@@ -15,6 +15,7 @@ function LoginInner() {
 
   const [identifier, setIdentifier] = useState(""); // national_id OR email
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,14 +101,24 @@ function LoginInner() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700">รหัสผ่าน</label>
-            <input
-              type="password"
-              required
-              autoComplete="current-password"
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[var(--spadt-navy)]"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <div className="relative mt-1">
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                autoComplete="current-password"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 pr-11 focus:outline-none focus:ring-2 focus:ring-[var(--spadt-navy)]"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+                className="absolute inset-y-0 right-2 flex items-center px-2 text-gray-500 hover:text-[var(--spadt-navy)]"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
 
           {error && (

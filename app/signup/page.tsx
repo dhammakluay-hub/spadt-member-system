@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Loader2, Check, AlertCircle, Mail, ArrowRight } from "lucide-react";
+import { Loader2, Check, AlertCircle, Mail, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
 import { MemberAPI } from "@/lib/api";
 import { SPADT_BRAND } from "@/lib/constants";
@@ -15,6 +15,8 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [agree, setAgree] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -155,14 +157,35 @@ export default function SignupPage() {
           {/* Password */}
           <div>
             <label className={LABEL}>รหัสผ่าน *</label>
-            <input type="password" required minLength={8} placeholder="อย่างน้อย 8 ตัวอักษร" className={FIELD}
-              value={password} onChange={(e) => setPassword(e.target.value)} />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                required minLength={8} placeholder="อย่างน้อย 8 ตัวอักษร"
+                className={`${FIELD} pr-11`}
+                value={password} onChange={(e) => setPassword(e.target.value)}
+              />
+              <button type="button" onClick={() => setShowPassword(v => !v)}
+                aria-label={showPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+                className="absolute inset-y-0 right-2 flex items-center px-2 text-gray-500 hover:text-[var(--spadt-navy)]">
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
 
           <div>
             <label className={LABEL}>ยืนยันรหัสผ่าน *</label>
-            <input type="password" required className={FIELD}
-              value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+            <div className="relative">
+              <input
+                type={showConfirm ? "text" : "password"}
+                required className={`${FIELD} pr-11`}
+                value={confirm} onChange={(e) => setConfirm(e.target.value)}
+              />
+              <button type="button" onClick={() => setShowConfirm(v => !v)}
+                aria-label={showConfirm ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+                className="absolute inset-y-0 right-2 flex items-center px-2 text-gray-500 hover:text-[var(--spadt-navy)]">
+                {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
 
           {/* Agreement */}
