@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 
 const PUBLIC_PATHS = [
   "/login", "/signup", "/forgot-password", "/reset-password",
+  "/verify", // public QR-scan verification — anyone can verify a member card
   "/_next", "/favicon.ico",
   "/manifest.json", "/sw.js", "/icon-192.svg", "/icon-512.svg",
 ];

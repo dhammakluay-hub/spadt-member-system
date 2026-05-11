@@ -1,14 +1,27 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import type { Member } from "@/lib/api";
 import { SPORTS } from "@/lib/constants";
 
+// Fallback when running SSR/build (no window). Once mounted in the browser the
+// component swaps to the real origin so the QR works on whatever domain it's
+// served from (vercel.app today, custom domain tomorrow).
+const FALLBACK_ORIGIN = "https://spadt-member-system.vercel.app";
+
 export default function MemberCard({ member }: { member: Member }) {
   const sport = SPORTS.find((s) => s.code === member.sport_code);
   const memberCode = member.member_code ?? member.id.slice(0, 8).toUpperCase();
+
+  const [origin, setOrigin] = useState(FALLBACK_ORIGIN);
+  useEffect(() => {
+    if (typeof window !== "undefined") setOrigin(window.location.origin);
+  }, []);
+
   // Encode richer data in QR for verification (URL format)
-  const qrPayload = `https://spadt.or.th/verify?code=${encodeURIComponent(memberCode)}&id=${member.id.slice(0, 8)}`;
+  const qrPayload = `${origin}/verify?code=${encodeURIComponent(memberCode)}&id=${member.id.slice(0, 8)}`;
+  const displayHost = origin.replace(/^https?:\/\//, "");
 
   return (
     <div
@@ -60,7 +73,7 @@ export default function MemberCard({ member }: { member: Member }) {
           <div className="bg-white p-1.5 rounded">
             <QRCodeCanvas value={qrPayload} size={72} level="M" />
           </div>
-          <div className="text-[9px] text-white/50 mt-2">spadt.or.th</div>
+          <div className="text-[9px] text-white/50 mt-2">{displayHost}</div>
         </div>
       </div>
     </div>

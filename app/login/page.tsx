@@ -48,6 +48,28 @@ function LoginInner() {
       }
 
       await signIn(emailToUse, password);
+
+      // Enforce: admin/staff must log in with email, not national_id
+      // (members are still allowed both)
+      if (isNationalId(identifier.trim())) {
+        const sb = getSupabase();
+        const { data: { user } } = await sb.auth.getUser();
+        if (user) {
+          const { data: prof } = await sb
+            .from("profiles")
+            .select("role")
+            .eq("id", user.id)
+            .maybeSingle();
+          const role = (prof as { role?: string } | null)?.role;
+          if (role === "admin" || role === "staff") {
+            await sb.auth.signOut();
+            setError("เจ้าหน้าที่ต้องเข้าสู่ระบบด้วยอีเมลเท่านั้น (ไม่รับเลขบัตรประชาชน)");
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
       router.push("/dashboard");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Login failed";
