@@ -46,15 +46,19 @@ type NavItem = {
  * Navigation per role v3:
  *   admin  — full menu + admin section (จัดการผู้ใช้ + Audit Log)
  *   staff  — back-office only (members, pending, cards, import, reports, settings)
- *   member — self-service (โปรไฟล์, สมัคร, บัตรของตัวเอง)
+ *   member — self-service (โปรไฟล์, บัตรของตัวเอง)
+ *            — "สมัครสมาชิก" หาย่อย่างเดียวเมื่อ member ยังไม่ได้กรอกฟอร์ม
+ *              (member_id == null). ถ้ากรอกแล้ว เมนูนี้ถูกซ่อน — ใช้ /me แก้ไขข้อมูลแทน
  */
 const MAIN_NAV: NavItem[] = [
   { href: "/dashboard", label: "แดชบอร์ด", Icon: LayoutDashboard, roles: ["admin", "staff"] },
   { href: "/me", label: "โปรไฟล์ของฉัน", Icon: User, roles: ["member"] },
-  { href: "/register", label: "ลงทะเบียน/สมัครสมาชิก", Icon: UserPlus, roles: ["member", "staff", "admin"] },
+  // /register: shown to admin/staff always; shown to member ONLY if not yet registered (filtered below)
+  { href: "/register", label: "สมัครสมาชิก", Icon: UserPlus, roles: ["member", "staff", "admin"] },
   { href: "/members", label: "สมาชิก", Icon: Users, roles: ["admin", "staff"] },
   { href: "/pending", label: "รออนุมัติ", Icon: Clock, roles: ["admin", "staff"] },
-  { href: "/cards", label: "บัตรสมาชิก", Icon: CreditCard, roles: ["admin", "staff", "member"] },
+  // /cards: admin/staff get full management, member is redirected to their own card on /me
+  { href: "/cards", label: "บัตรสมาชิก", Icon: CreditCard, roles: ["admin", "staff"] },
   { href: "/import", label: "นำเข้า Excel", Icon: Upload, roles: ["admin", "staff"] },
   { href: "/reports", label: "รายงาน", Icon: FileText, roles: ["admin", "staff"] },
   { href: "/reports/advanced", label: "รายงานขั้นสูง", Icon: PieChart, roles: ["admin", "staff"] },
@@ -71,9 +75,16 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/admin/notifications", label: "Email Queue", Icon: Mail, roles: ["admin", "staff"] },
 ];
 
-function visibleFor(role: UserRole | undefined, items: NavItem[]) {
+function visibleFor(user: AuthUser | null, items: NavItem[]) {
+  const role = user?.role;
   if (!role) return [];
-  return items.filter((it) => !it.roles || it.roles.includes(role));
+  return items.filter((it) => {
+    // role gate
+    if (it.roles && !it.roles.includes(role)) return false;
+    // member-specific: hide /register once they've completed the form (have member_id)
+    if (role === "member" && it.href === "/register" && user?.member_id) return false;
+    return true;
+  });
 }
 
 export default function Sidebar() {
@@ -90,8 +101,8 @@ export default function Sidebar() {
     router.push("/login");
   };
 
-  const main = visibleFor(user?.role, MAIN_NAV);
-  const admin = visibleFor(user?.role, ADMIN_NAV);
+  const main = visibleFor(user, MAIN_NAV);
+  const admin = visibleFor(user, ADMIN_NAV);
   const showAdminSection = admin.length > 0;
 
   return (
