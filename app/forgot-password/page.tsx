@@ -92,7 +92,7 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setError(null);
 
-    if (!/^\d{6}$/.test(code)) { setError("รหัสต้องเป็นตัวเลข 6 หลัก"); return; }
+    if (!/^\d{6,10}$/.test(code)) { setError("รหัสต้องเป็นตัวเลข 6-10 หลัก ตามที่ได้รับในอีเมล"); return; }
     if (password.length < 8) { setError("รหัสผ่านต้องอย่างน้อย 8 ตัวอักษร"); return; }
     if (password !== confirm) { setError("รหัสผ่านยืนยันไม่ตรงกัน"); return; }
 
@@ -187,20 +187,20 @@ export default function ForgotPasswordPage() {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">รหัส 6 หลักจากอีเมล *</label>
+            <label className="block text-sm font-medium text-gray-700">รหัสยืนยันจากอีเมล *</label>
             <input
               type="text"
               required
               inputMode="numeric"
-              pattern="[0-9]{6}"
-              maxLength={6}
+              pattern="[0-9]{6,10}"
+              maxLength={10}
               autoComplete="one-time-code"
-              placeholder="123456"
+              placeholder="ใส่รหัสตามที่ได้รับในอีเมล"
               className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-3 text-center text-2xl font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-[var(--spadt-navy)]"
               value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 10))}
             />
-            <p className="text-xs text-gray-500 mt-1">รหัสมีอายุ 1 ชั่วโมง</p>
+            <p className="text-xs text-gray-500 mt-1">ใส่ตัวเลขทั้งหมดที่เห็นในอีเมล (รหัสมีอายุ 1 ชั่วโมง)</p>
           </div>
 
           <div>
@@ -273,7 +273,7 @@ export default function ForgotPasswordPage() {
         {Header}
         <form onSubmit={requestOtp} className="space-y-4">
         <p className="text-sm text-gray-600">
-          กรอกเลขบัตรประชาชน หรือ อีเมล ที่ใช้สมัครสมาชิก เราจะส่ง <strong>รหัส 6 หลัก</strong> ไปยังอีเมลของคุณ
+          กรอกเลขบัตรประชาชน หรือ อีเมล ที่ใช้สมัครสมาชิก เราจะส่ง <strong>รหัสยืนยัน</strong> ไปยังอีเมลของคุณ
         </p>
 
         <div>
@@ -299,7 +299,7 @@ export default function ForgotPasswordPage() {
           className="w-full py-2.5 rounded-lg bg-[var(--spadt-navy)] text-white font-semibold hover:bg-[var(--spadt-navy-light)] disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-          {loading ? "กำลังส่ง..." : "ส่งรหัส 6 หลัก"}
+          {loading ? "กำลังส่ง..." : "ส่งรหัสยืนยัน"}
         </button>
 
         <Link
