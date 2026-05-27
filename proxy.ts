@@ -82,6 +82,16 @@ export async function proxy(request: NextRequest) {
     .maybeSingle();
   const role = normalizeRole((profile as { role?: string } | null)?.role);
 
+  // EXCEPTION: members can view their OWN report PDF
+  // — let this through before any other role-gate fires.
+  // RLS on `members` already restricts them to their own row, so even if a
+  // member tampers with the id in the URL they cannot read someone else's data.
+  const isMemberOwnReport =
+    role === "member" && /^\/members\/[^/]+\/report\/?$/.test(pathname);
+  if (isMemberOwnReport) {
+    return response;
+  }
+
   const needsAdmin = ADMIN_ONLY.some((p) => pathname.startsWith(p));
   const needsStaffOrAbove = STAFF_AND_ABOVE.some((p) => pathname.startsWith(p));
 
@@ -99,17 +109,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Member trying to view a /members/* page → bounce back to /me,
-  // EXCEPT the report PDF which they need for sponsorship/employment.
-  // RLS on `members` already restricts them to their own row, so the report
-  // page will only ever render their own data even if they try a random id.
+  // Member trying to view ANY /members/* page that isn't their own report
+  // → bounce back to /me. (The /report exception is already handled above.)
   if (role === "member" && /^\/members\/[^/]+/.test(pathname)) {
-    const isOwnReport = /^\/members\/[^/]+\/report\/?$/.test(pathname);
-    if (!isOwnReport) {
-      const url = request.nextUrl.clone();
-      url.pathname = MEMBER_HOME;
-      return NextResponse.redirect(url);
-    }
+    const url = request.nextUrl.clone();
+    url.pathname = MEMBER_HOME;
+    return NextResponse.redirect(url);
   }
 
   return response;
