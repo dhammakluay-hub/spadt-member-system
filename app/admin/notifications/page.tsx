@@ -42,6 +42,56 @@ export default function AdminNotificationsPage() {
     }
   };
 
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [sendingAll, setSendingAll] = useState(false);
+
+  const sendNow = async (id: string) => {
+    if (!confirm("ส่งอีเมลฉบับนี้จริงผ่าน Brevo?")) return;
+    setSendingId(id);
+    try {
+      const res = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "ส่งไม่สำเร็จ");
+      const result = data.results?.[0];
+      if (result?.ok) {
+        alert("ส่งสำเร็จ ✅");
+      } else {
+        alert("ส่งไม่สำเร็จ: " + (result?.error ?? "unknown"));
+      }
+      await load();
+    } catch (e) {
+      alert("Error: " + (e instanceof Error ? e.message : e));
+    } finally {
+      setSendingId(null);
+    }
+  };
+
+  const sendAllPending = async () => {
+    const pending = emails.filter((e) => e.status === "pending").length;
+    if (pending === 0) { alert("ไม่มี email รอส่ง"); return; }
+    if (!confirm(`ส่ง ${pending} ฉบับที่รออยู่ทั้งหมด?`)) return;
+    setSendingAll(true);
+    try {
+      const res = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sendAll: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "ส่งไม่สำเร็จ");
+      alert(`ส่งสำเร็จ ${data.sent} ฉบับ · ล้มเหลว ${data.failed} ฉบับ`);
+      await load();
+    } catch (e) {
+      alert("Error: " + (e instanceof Error ? e.message : e));
+    } finally {
+      setSendingAll(false);
+    }
+  };
+
   const stats = {
     total: emails.length,
     pending: emails.filter((e) => e.status === "pending").length,
@@ -56,12 +106,11 @@ export default function AdminNotificationsPage() {
         <div className="spadt-card bg-blue-50 border border-blue-200 text-sm text-blue-900">
           <div className="font-semibold mb-1">📧 ระบบคิวอีเมลแจ้งเตือน</div>
           <div className="text-xs">
-            ระบบจะเก็บอีเมลที่ต้องส่งให้สมาชิก (เช่น แจ้งอนุมัติ/ปฏิเสธ) ลงในคิวนี้อัตโนมัติเมื่อเกิดเหตุการณ์
+            ระบบจะเก็บอีเมลที่ต้องส่งให้สมาชิกลงในคิวนี้อัตโนมัติเมื่อเกิดเหตุการณ์ (เช่น approve/reject)
             <br />
-            <strong>การส่งจริง:</strong> ต้องเชื่อม email provider (Resend / SendGrid / SMTP) ผ่าน Supabase Edge Function — ดูคู่มือที่
-            <a href="https://resend.com/docs" target="_blank" rel="noreferrer" className="underline ml-1">resend.com/docs</a>
+            <strong>กดปุ่ม ✉️ ส่งจริง</strong> ที่แถวใดแถวหนึ่ง หรือ <strong>กดปุ่ม &ldquo;ส่งทั้งหมด&rdquo;</strong> เพื่อส่งทุก email ที่รออยู่ผ่าน Brevo
             <br />
-            <strong>วิธีใช้ตอนนี้:</strong> เปิดอีเมลจากคิว → copy หัวข้อ + เนื้อหา → ส่งจาก Gmail ตัวเอง → กด &ldquo;ทำเครื่องหมายว่าส่งแล้ว&rdquo;
+            <strong>ต้องตั้งค่า:</strong> Vercel env vars <code className="bg-blue-100 px-1 rounded">BREVO_API_KEY</code>, <code className="bg-blue-100 px-1 rounded">BREVO_SENDER_EMAIL</code>, <code className="bg-blue-100 px-1 rounded">BREVO_SENDER_NAME</code>
           </div>
         </div>
 
@@ -75,7 +124,7 @@ export default function AdminNotificationsPage() {
 
         {/* Filter + table */}
         <div className="spadt-card">
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex items-center gap-3 mb-3 flex-wrap">
             <select className="px-3 py-2 rounded-lg border border-gray-300 text-sm" value={filter} onChange={(e) => setFilter(e.target.value)}>
               <option value="">สถานะทั้งหมด</option>
               <option value="pending">รอส่ง</option>
@@ -83,6 +132,15 @@ export default function AdminNotificationsPage() {
               <option value="failed">ล้มเหลว</option>
             </select>
             <button onClick={load} className="text-sm text-[var(--spadt-navy)] hover:underline">รีเฟรช</button>
+            <div className="flex-1" />
+            <button
+              onClick={sendAllPending}
+              disabled={sendingAll || stats.pending === 0}
+              className="spadt-btn spadt-btn-primary text-sm flex items-center gap-1 disabled:opacity-50"
+            >
+              {sendingAll ? <Loader2 className="w-4 h-4 animate-spin"/> : <Send className="w-4 h-4"/>}
+              ส่งทั้งหมด ({stats.pending})
+            </button>
           </div>
 
           {error && <div className="p-3 rounded-lg bg-red-50 text-red-700 text-sm mb-3">⚠️ {error}</div>}
@@ -111,10 +169,21 @@ export default function AdminNotificationsPage() {
                       <td className="p-2 text-xs">{e.trigger}</td>
                       <td className="p-2"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLOR[e.status]}`}>{e.status}</span></td>
                       <td className="p-2 text-right">
-                        <div className="flex gap-1 justify-end">
+                        <div className="flex gap-1 justify-end items-center">
                           <button onClick={() => setSelected(e)} className="p-1.5 rounded hover:bg-gray-200" title="ดู"><Eye className="w-4 h-4"/></button>
+                          {(e.status === "pending" || e.status === "failed") && (
+                            <button
+                              onClick={() => sendNow(e.id)}
+                              disabled={sendingId === e.id}
+                              className="px-2 py-1 rounded bg-[var(--spadt-navy)] text-white text-xs flex items-center gap-1 hover:bg-[var(--spadt-navy-light)] disabled:opacity-50"
+                              title="ส่งจริงผ่าน Brevo"
+                            >
+                              {sendingId === e.id ? <Loader2 className="w-3 h-3 animate-spin"/> : <Send className="w-3 h-3"/>}
+                              ส่งจริง
+                            </button>
+                          )}
                           {e.status === "pending" && (
-                            <button onClick={() => markSent(e.id)} className="p-1.5 rounded hover:bg-green-100 text-green-600" title="ทำเครื่องหมายว่าส่งแล้ว"><Send className="w-4 h-4"/></button>
+                            <button onClick={() => markSent(e.id)} className="p-1.5 rounded hover:bg-gray-100 text-gray-500" title="ทำเครื่องหมายว่าส่งแล้ว (ไม่ส่งจริง)">✓</button>
                           )}
                         </div>
                       </td>
