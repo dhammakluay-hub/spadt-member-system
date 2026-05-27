@@ -21,7 +21,7 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     // Supabase recovery links arrive as either:
-    //   1. URL hash: #access_token=...&type=recovery   (older flow)
+    //   1. URL hash: #access_token=...&type=recovery   (older implicit flow)
     //   2. URL search: ?code=...                         (newer PKCE flow)
     // The browser client (@supabase/ssr) auto-detects on load and emits
     // PASSWORD_RECOVERY via onAuthStateChange. We listen for that event so we
@@ -42,13 +42,33 @@ export default function ResetPasswordPage() {
       }
     });
 
-    // Also try once immediately in case the event already fired before listener
-    sb.auth.getSession().then(({ data }) => {
-      if (data.session) resolve(true);
-    });
+    // PKCE flow: when URL has ?code=..., exchange it manually for a session.
+    // This handles the case where auto-detect didn't run (or already ran but
+    // the listener was attached too late).
+    (async () => {
+      try {
+        const url = new URL(window.location.href);
+        const code = url.searchParams.get("code");
+        if (code) {
+          const { error: exErr } = await sb.auth.exchangeCodeForSession(code);
+          if (!exErr) {
+            resolve(true);
+            return;
+          }
+          // Some Supabase versions throw "code verifier" errors here when the
+          // auto-detect already consumed the code — that's fine, the listener
+          // above will fire shortly.
+        }
+        // Fallback: check if session is already populated (auto-detect won).
+        const { data } = await sb.auth.getSession();
+        if (data.session) resolve(true);
+      } catch {
+        // ignore — rely on listener / timeout
+      }
+    })();
 
-    // Give the auto-detect ~3s. After that, if no session, treat as expired.
-    const timer = setTimeout(() => resolve(false), 3000);
+    // Generous timeout so slow networks / Gmail prefetch quirks have time.
+    const timer = setTimeout(() => resolve(false), 8000);
 
     return () => {
       cancelled = true;
