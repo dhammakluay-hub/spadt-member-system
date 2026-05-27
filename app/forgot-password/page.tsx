@@ -129,48 +129,57 @@ export default function ForgotPasswordPage() {
 
   // ============================================================
   // Render — three states: enter_email | enter_code | done
+  //
+  // NOTE: do NOT define a `Wrapper` component inside this function body.
+  // React would treat it as a fresh component on every render, which
+  // unmounts/remounts the input on every keystroke and the field loses
+  // focus mid-typing. Inline the JSX in each branch instead.
   // ============================================================
-  const Wrapper = ({ children }: { children: React.ReactNode }) => (
-    <div className="min-h-screen flex items-center justify-center p-6"
-      style={{ background: "linear-gradient(135deg, #0a1e3f 0%, #1a3366 100%)" }}>
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8">
-        <div className="text-center mb-6">
-          <div className="w-14 h-14 mx-auto rounded-full bg-[var(--spadt-gold)] flex items-center justify-center text-[var(--spadt-navy)] font-bold text-xl">S</div>
-          <h1 className="mt-3 text-xl font-bold text-[var(--spadt-navy)]">{SPADT_BRAND.name}</h1>
-          <p className="text-xs text-gray-500 mt-1">
-            {step === "enter_email" && "ลืมรหัสผ่าน — ขั้น 1/2"}
-            {step === "enter_code" && "ลืมรหัสผ่าน — ขั้น 2/2"}
-            {step === "done" && "เสร็จสิ้น"}
-          </p>
-        </div>
-        {children}
-      </div>
+  const headerSub =
+    step === "enter_email" ? "ลืมรหัสผ่าน — ขั้น 1/2" :
+    step === "enter_code"  ? "ลืมรหัสผ่าน — ขั้น 2/2" :
+    "เสร็จสิ้น";
+
+  const Header = (
+    <div className="text-center mb-6">
+      <div className="w-14 h-14 mx-auto rounded-full bg-[var(--spadt-gold)] flex items-center justify-center text-[var(--spadt-navy)] font-bold text-xl">S</div>
+      <h1 className="mt-3 text-xl font-bold text-[var(--spadt-navy)]">{SPADT_BRAND.name}</h1>
+      <p className="text-xs text-gray-500 mt-1">{headerSub}</p>
     </div>
   );
 
+  const pageBg = {
+    background: "linear-gradient(135deg, #0a1e3f 0%, #1a3366 100%)",
+  };
+
   if (step === "done") {
     return (
-      <Wrapper>
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto rounded-full bg-green-100 flex items-center justify-center text-green-600">
-            <CheckCircle2 className="w-8 h-8" />
+      <div className="min-h-screen flex items-center justify-center p-6" style={pageBg}>
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8">
+          {Header}
+          <div className="text-center">
+            <div className="w-16 h-16 mx-auto rounded-full bg-green-100 flex items-center justify-center text-green-600">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+            <h2 className="mt-4 text-xl font-bold text-[var(--spadt-navy)]">ตั้งรหัสผ่านใหม่สำเร็จ</h2>
+            <p className="mt-3 text-sm text-gray-600">
+              ตอนนี้คุณสามารถเข้าสู่ระบบด้วยรหัสผ่านใหม่ได้แล้ว
+            </p>
+            <Link href="/login" className="mt-6 inline-flex items-center gap-1 spadt-btn spadt-btn-primary">
+              <ArrowLeft className="w-4 h-4" /> ไปหน้าเข้าสู่ระบบ
+            </Link>
           </div>
-          <h2 className="mt-4 text-xl font-bold text-[var(--spadt-navy)]">ตั้งรหัสผ่านใหม่สำเร็จ</h2>
-          <p className="mt-3 text-sm text-gray-600">
-            ตอนนี้คุณสามารถเข้าสู่ระบบด้วยรหัสผ่านใหม่ได้แล้ว
-          </p>
-          <Link href="/login" className="mt-6 inline-flex items-center gap-1 spadt-btn spadt-btn-primary">
-            <ArrowLeft className="w-4 h-4" /> ไปหน้าเข้าสู่ระบบ
-          </Link>
         </div>
-      </Wrapper>
+      </div>
     );
   }
 
   if (step === "enter_code") {
     return (
-      <Wrapper>
-        <form onSubmit={verifyAndReset} className="space-y-4">
+      <div className="min-h-screen flex items-center justify-center p-6" style={pageBg}>
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8">
+          {Header}
+          <form onSubmit={verifyAndReset} className="space-y-4">
           {info && (
             <div className="p-3 rounded-lg bg-blue-50 text-blue-800 text-xs border border-blue-200">
               📧 {info}
@@ -251,15 +260,18 @@ export default function ForgotPasswordPage() {
           >
             ← ใช้อีเมลอื่น / ขอรหัสใหม่
           </button>
-        </form>
-      </Wrapper>
+          </form>
+        </div>
+      </div>
     );
   }
 
   // step === "enter_email"
   return (
-    <Wrapper>
-      <form onSubmit={requestOtp} className="space-y-4">
+    <div className="min-h-screen flex items-center justify-center p-6" style={pageBg}>
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8">
+        {Header}
+        <form onSubmit={requestOtp} className="space-y-4">
         <p className="text-sm text-gray-600">
           กรอกเลขบัตรประชาชน หรือ อีเมล ที่ใช้สมัครสมาชิก เราจะส่ง <strong>รหัส 6 หลัก</strong> ไปยังอีเมลของคุณ
         </p>
@@ -296,7 +308,8 @@ export default function ForgotPasswordPage() {
         >
           ← กลับหน้าเข้าสู่ระบบ
         </Link>
-      </form>
-    </Wrapper>
+        </form>
+      </div>
+    </div>
   );
 }
