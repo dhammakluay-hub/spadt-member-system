@@ -99,11 +99,17 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Member trying to view another member's detail page → /me
+  // Member trying to view a /members/* page → bounce back to /me,
+  // EXCEPT the report PDF which they need for sponsorship/employment.
+  // RLS on `members` already restricts them to their own row, so the report
+  // page will only ever render their own data even if they try a random id.
   if (role === "member" && /^\/members\/[^/]+/.test(pathname)) {
-    const url = request.nextUrl.clone();
-    url.pathname = MEMBER_HOME;
-    return NextResponse.redirect(url);
+    const isOwnReport = /^\/members\/[^/]+\/report\/?$/.test(pathname);
+    if (!isOwnReport) {
+      const url = request.nextUrl.clone();
+      url.pathname = MEMBER_HOME;
+      return NextResponse.redirect(url);
+    }
   }
 
   return response;
