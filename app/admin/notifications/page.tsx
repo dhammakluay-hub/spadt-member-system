@@ -209,19 +209,33 @@ export default function AdminNotificationsPage() {
                 <div className="grid grid-cols-3 gap-2"><dt className="text-gray-500">เหตุการณ์:</dt><dd className="col-span-2">{selected.trigger}</dd></div>
               </dl>
               <div className="bg-gray-50 p-4 rounded text-sm whitespace-pre-wrap font-mono">{selected.body}</div>
-              <div className="mt-3 flex gap-2 justify-end">
+              <div className="mt-3 flex gap-2 justify-end items-center flex-wrap">
                 <button
-                  onClick={() => navigator.clipboard.writeText(`To: ${selected.to_email}\nSubject: ${selected.subject}\n\n${selected.body}`)}
+                  onClick={() => {
+                    navigator.clipboard.writeText(`To: ${selected.to_email}\nSubject: ${selected.subject}\n\n${selected.body}`);
+                    alert("ก๊อปเรียบร้อย ✅");
+                  }}
                   className="spadt-btn spadt-btn-gold text-sm"
                 >
-                  Copy ทั้งอีเมล
+                  📋 Copy ทั้งอีเมล
                 </button>
-                <a
-                  href={`mailto:${selected.to_email}?subject=${encodeURIComponent(selected.subject)}&body=${encodeURIComponent(selected.body)}`}
-                  className="spadt-btn spadt-btn-primary text-sm flex items-center gap-1"
-                >
-                  <Send className="w-4 h-4"/> เปิดใน Email Client
-                </a>
+                {(selected.status === "pending" || selected.status === "failed") ? (
+                  <button
+                    onClick={async () => {
+                      await sendNow(selected.id);
+                      setSelected(null);
+                    }}
+                    disabled={sendingId === selected.id}
+                    className="spadt-btn spadt-btn-primary text-sm flex items-center gap-1 disabled:opacity-50"
+                  >
+                    {sendingId === selected.id ? <Loader2 className="w-4 h-4 animate-spin"/> : <Send className="w-4 h-4"/>}
+                    ส่งจริงผ่าน Brevo
+                  </button>
+                ) : (
+                  <span className="px-3 py-1.5 rounded-lg bg-green-100 text-green-700 text-sm font-medium">
+                    ✓ ส่งแล้ว
+                  </span>
+                )}
               </div>
             </div>
           </div>
