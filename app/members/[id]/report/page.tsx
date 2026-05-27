@@ -49,29 +49,48 @@ export default function MemberReportPage({ params }: Props) {
         import("html-to-image"),
         import("jspdf"),
       ]);
-      const dataUrl = await toPng(reportRef.current, {
+
+      // 210mm at 96 DPI ≈ 794px. Force capture at this size so the result
+      // is identical no matter what the viewport is (desktop, tablet, phone).
+      const CAPTURE_WIDTH_PX = 794;
+      const node = reportRef.current;
+
+      const dataUrl = await toPng(node, {
         pixelRatio: 2,
         cacheBust: true,
         backgroundColor: "#ffffff",
+        width: CAPTURE_WIDTH_PX,
+        height: node.scrollHeight,
+        style: {
+          width: `${CAPTURE_WIDTH_PX}px`,
+          margin: "0",
+          transform: "none",
+        },
       });
+
       const img = new Image();
       await new Promise<void>((resolve) => { img.onload = () => resolve(); img.src = dataUrl; });
+
       const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const margin = 10;
-      const imgWidth = pdfWidth - margin * 2;
+      const pdfWidth = pdf.internal.pageSize.getWidth();   // 210mm
+      const pdfHeight = pdf.internal.pageSize.getHeight(); // 297mm
+
+      // No outer PDF margin — the report has its own 15mm padding built into
+      // the layout, so let the image fill the entire page width.
+      const imgWidth = pdfWidth;
       const imgHeight = (img.height * imgWidth) / img.width;
+
       let heightLeft = imgHeight;
-      let position = margin;
-      pdf.addImage(dataUrl, "PNG", margin, position, imgWidth, imgHeight);
-      heightLeft -= pdfHeight - margin * 2;
+      let position = 0;
+      pdf.addImage(dataUrl, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
       while (heightLeft > 0) {
-        position = heightLeft - imgHeight + margin;
+        position = heightLeft - imgHeight;
         pdf.addPage();
-        pdf.addImage(dataUrl, "PNG", margin, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight - margin * 2;
+        pdf.addImage(dataUrl, "PNG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
       }
+
       pdf.save(`SPADT-Profile-${member.first_name}-${member.last_name}.pdf`);
     } catch (e) {
       alert("ส่งออก PDF ไม่สำเร็จ: " + (e instanceof Error ? e.message : e));
@@ -128,13 +147,24 @@ export default function MemberReportPage({ params }: Props) {
           body { background: white !important; }
         }
         .report-page {
-          max-width: 210mm;
+          /* Fixed A4 width so PDF capture is always the same size regardless
+             of viewport. Phone users can pinch-zoom or scroll horizontally on
+             screen; the PDF output is what matters. */
+          width: 210mm;
+          max-width: 100%;
           margin: 0 auto;
           background: white;
-          padding: 18mm 18mm;
+          padding: 15mm 15mm;
           font-family: var(--font-sarabun), sans-serif;
           color: #1a1a1a;
           line-height: 1.5;
+          box-sizing: border-box;
+        }
+        @media (max-width: 768px) {
+          /* On phone screens, let the report shrink to viewport for readable
+             on-screen preview. The PDF export still captures at 794px because
+             the toPng() call below passes an explicit width override. */
+          .report-page { width: 100%; padding: 12mm 10mm; }
         }
         .report-section {
           margin-top: 20px;
